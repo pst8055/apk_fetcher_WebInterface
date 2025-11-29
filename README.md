@@ -10,6 +10,14 @@ A Python/Flask application to extract and download APK files from your connected
 *   **Download**: One-click download of the APK file to your computer.
 *   **Dockerized**: Easy to run without manual dependency management.
 
+## Prerequisites
+*   **Android Device** with **USB Debugging enabled**:
+    1. Go to **Settings** → **About Phone**
+    2. Tap **Build Number** 7 times to enable Developer Options
+    3. Go to **Settings** → **Developer Options**
+    4. Enable **USB Debugging**
+*   **ADB installed** (if running without Docker)
+
 ## How to Run
 
 ### Option 1: Using Docker (Recommended)
