@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APK Extractor (ADB)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .status-text {
+            font-weight: bold;
+        }
+
+        .status-connected {
+            color: green;
+        }
+
+        .status-disconnected {
+            color: red;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        .app-list {
+            list-style: none;
+            padding: 0;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .app-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .app-item:last-child {
+            border-bottom: none;
+        }
+
+        .app-name {
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            display: none;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>APK Extractor</h1>
+
+        <div class="status-bar">
+            <span id="statusText" class="status-text status-disconnected">Disconnected</span>
+            <button id="connectBtn" onclick="checkDevice()">Check Connection</button>
+        </div>
+
+        <div id="appSection" style="display: none;">
+            <input type="text" id="searchBox" class="search-box" placeholder="Search apps..." onkeyup="filterApps()">
+            <button onclick="loadApps()">Refresh App List</button>
+
+            <div id="loading" class="loading">Loading apps... (This may take a few seconds)</div>
+
+            <ul id="appList" class="app-list">
+                <!-- Apps will be populated here -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let allApps = [];
+
+        async function checkDevice() {
+            const statusText = document.getElementById('statusText');
+            const appSection = document.getElementById('appSection');
+
+            statusText.textContent = "Checking...";
+
+            try {
+                const response = await fetch('/check_device');
+                const data = await response.json();
+
+                if (data.connected) {
+                    statusText.textContent = data.message;
+                    statusText.className = 'status-text status-connected';
+                    appSection.style.display = 'block';
+                    loadApps();
+                } else {
+                    statusText.textContent = data.message;
+                    statusText.className = 'status-text status-disconnected';
+                    appSection.style.display = 'none';
+                }
+            } catch (error) {
+                statusText.textContent = "Error connecting to server";
+                statusText.className = 'status-text status-disconnected';
+            }
+        }
+
+        async function loadApps() {
+            const list = document.getElementById('appList');
+            const loading = document.getElementById('loading');
+
+            list.innerHTML = '';
+            loading.style.display = 'block';
+
+            try {
+                const response = await fetch('/list_apps');
+                const data = await response.json();
+
+                if (data.apps) {
+                    allApps = data.apps;
+                    renderApps(allApps);
+                }
+            } catch (error) {
+                alert("Failed to load apps");
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function renderApps(apps) {
+            const list = document.getElementById('appList');
+            list.innerHTML = '';
+
+            apps.forEach(app => {
+                const li = document.createElement('li');
+                li.className = 'app-item';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'app-name';
+                nameSpan.textContent = app.id;
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.textContent = 'Download';
+                downloadBtn.onclick = () => downloadApp(app.id, app.path);
+
+                li.appendChild(nameSpan);
+                li.appendChild(downloadBtn);
+                list.appendChild(li);
+            });
+        }
+
+        function filterApps() {
+            const query = document.getElementById('searchBox').value.toLowerCase();
+            const filtered = allApps.filter(app => app.id.toLowerCase().includes(query));
+            renderApps(filtered);
+        }
+
+        function downloadApp(id, path) {
+            // Create a hidden form to submit the post request
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/download';
+
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'package_id';
+            idInput.value = id;
+
+            const pathInput = document.createElement('input');
+            pathInput.type = 'hidden';
+            pathInput.name = 'package_path';
+            pathInput.value = path;
+
+            form.appendChild(idInput);
+            form.appendChild(pathInput);
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        }
+
+        // Check on load
+        checkDevice();
+    </script>
+</body>
+
+</html>
