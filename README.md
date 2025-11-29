@@ -2,7 +2,7 @@
 
 A Python/Flask application to extract and download APK files from your connected Android device using ADB.
 
-![How it works](../instructions.png)
+![How it works](instructions.png)
 
 ## Features
 *   **Connect via ADB**: Automatically detects connected Android devices.
